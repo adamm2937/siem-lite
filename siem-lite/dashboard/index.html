@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIEM-Lite — Threat Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080c10;
+    --surface:  #0d1117;
+    --card:     #111820;
+    --border:   #1e2d3d;
+    --accent:   #00d4ff;
+    --accent2:  #7c3aed;
+    --green:    #00ff88;
+    --amber:    #ffb000;
+    --red:      #ff3860;
+    --critical: #ff0055;
+    --text:     #c9d4e0;
+    --muted:    #4a607a;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid noise overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 0 24px 48px; }
+
+  /* ── header ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 0 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text { font-family: var(--sans); font-weight: 800; font-size: 20px; color: #fff; letter-spacing: -0.5px; }
+  .logo-sub  { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--green); letter-spacing: 1px;
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.8); }
+  }
+  #clock { color: var(--muted); font-size: 12px; }
+
+  /* ── stat cards ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    position: relative; overflow: hidden;
+    transition: border-color .2s;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--accent-color, var(--accent));
+  }
+  .stat-card:hover { border-color: var(--accent-color, var(--accent)); }
+  .stat-card[data-color="green"]    { --accent-color: var(--green); }
+  .stat-card[data-color="amber"]    { --accent-color: var(--amber); }
+  .stat-card[data-color="red"]      { --accent-color: var(--red); }
+  .stat-card[data-color="critical"] { --accent-color: var(--critical); }
+
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 10px; }
+  .stat-value { font-family: var(--sans); font-weight: 800; font-size: 36px; color: #fff; line-height: 1; }
+  .stat-sub   { font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+  /* ── main grid ── */
+  .main-grid { display: grid; grid-template-columns: 1fr 380px; gap: 20px; align-items: start; }
+
+  /* ── panel ── */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .panel-title {
+    font-family: var(--sans); font-weight: 700; font-size: 13px;
+    color: #fff; letter-spacing: 0.3px;
+  }
+  .panel-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    background: rgba(0,212,255,0.1); color: var(--accent);
+    border: 1px solid rgba(0,212,255,0.2);
+  }
+
+  /* ── alert feed ── */
+  .alert-feed { max-height: 460px; overflow-y: auto; }
+  .alert-feed::-webkit-scrollbar { width: 4px; }
+  .alert-feed::-webkit-scrollbar-track { background: transparent; }
+  .alert-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .alert-item {
+    display: grid; grid-template-columns: auto 1fr auto;
+    gap: 12px; align-items: start;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    animation: slideIn .3s ease;
+    transition: background .15s;
+    cursor: default;
+  }
+  .alert-item:hover { background: rgba(255,255,255,0.02); }
+  .alert-item:last-child { border-bottom: none; }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  .sev-pill {
+    font-size: 9px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 7px; border-radius: 4px; text-transform: uppercase;
+    white-space: nowrap; margin-top: 1px;
+  }
+  .sev-critical { background: rgba(255,0,85,0.15);  color: var(--critical); border: 1px solid rgba(255,0,85,0.3); }
+  .sev-high     { background: rgba(255,56,96,0.12); color: var(--red);      border: 1px solid rgba(255,56,96,0.25); }
+  .sev-medium   { background: rgba(255,176,0,0.12); color: var(--amber);    border: 1px solid rgba(255,176,0,0.25); }
+  .sev-low      { background: rgba(0,255,136,0.1);  color: var(--green);    border: 1px solid rgba(0,255,136,0.2); }
+  .sev-info     { background: rgba(0,212,255,0.08); color: var(--accent);   border: 1px solid rgba(0,212,255,0.15); }
+
+  .alert-body { min-width: 0; }
+  .alert-title { font-weight: 500; color: #fff; margin-bottom: 3px; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alert-desc  { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .alert-mitre { font-size: 10px; color: var(--accent2); margin-top: 4px; }
+  .alert-meta  { text-align: right; }
+  .alert-rule  { font-size: 10px; color: var(--muted); }
+  .alert-time  { font-size: 10px; color: var(--muted); }
+
+  /* ── right column ── */
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── severity chart ── */
+  .sev-chart { padding: 16px 20px; }
+  .sev-bar-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .sev-bar-label { width: 60px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .sev-bar-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .sev-bar-fill  { height: 100%; border-radius: 3px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+  .sev-bar-count { width: 30px; text-align: right; font-size: 11px; color: var(--text); }
+
+  /* ── MITRE heatmap ── */
+  .mitre-grid { padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; }
+  .mitre-row  { display: flex; align-items: center; gap: 10px; }
+  .mitre-tactic { flex: 1; font-size: 11px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mitre-count  {
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 4px;
+    background: rgba(124,58,237,0.2); color: var(--accent2);
+    min-width: 28px; text-align: center;
+  }
+
+  /* ── event log ── */
+  .event-log { max-height: 220px; overflow-y: auto; font-size: 11px; padding: 12px 16px; }
+  .event-log::-webkit-scrollbar { width: 3px; }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); }
+  .log-line { color: var(--muted); padding: 2px 0; font-size: 11px; border-bottom: 1px solid rgba(30,45,61,0.4); margin-bottom: 2px; }
+  .log-line span { color: var(--accent); }
+
+  /* ── empty state ── */
+  .empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 12px; }
+
+  /* ── footer ── */
+  footer {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--muted); font-size: 11px;
+  }
+
+  @media (max-width: 1000px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .main-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <div>
+        <div class="logo-text">SIEM-Lite</div>
+        <div class="logo-sub">Threat Detection Platform</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      <div id="clock"></div>
+    </div>
+  </header>
+
+  <!-- stat cards -->
+  <div class="stats-row">
+    <div class="stat-card" data-color="green">
+      <div class="stat-label">Events Processed</div>
+      <div class="stat-value" id="stat-events">—</div>
+      <div class="stat-sub">total ingested</div>
+    </div>
+    <div class="stat-card" data-color="amber">
+      <div class="stat-label">Alerts Fired</div>
+      <div class="stat-value" id="stat-alerts">—</div>
+      <div class="stat-sub">detection rules triggered</div>
+    </div>
+    <div class="stat-card" data-color="red">
+      <div class="stat-label">High / Critical</div>
+      <div class="stat-value" id="stat-critical">—</div>
+      <div class="stat-sub">requires immediate attention</div>
+    </div>
+    <div class="stat-card" data-color="critical">
+      <div class="stat-label">Active Sources</div>
+      <div class="stat-value" id="stat-sources">4</div>
+      <div class="stat-sub">auth · nginx · syslog · json</div>
+    </div>
+  </div>
+
+  <!-- main grid -->
+  <div class="main-grid">
+
+    <!-- alert feed -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">⚠ Alert Feed</div>
+        <div class="panel-badge" id="alert-count-badge">0 alerts</div>
+      </div>
+      <div class="alert-feed" id="alert-feed">
+        <div class="empty">No alerts yet — start simulate.py to generate events</div>
+      </div>
+    </div>
+
+    <!-- right column -->
+    <div class="right-col">
+
+      <!-- severity breakdown -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Severity Breakdown</div>
+        </div>
+        <div class="sev-chart" id="sev-chart">
+          <div class="empty" style="padding:20px 0">Waiting for data…</div>
+        </div>
+      </div>
+
+      <!-- MITRE tactics -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">MITRE ATT&CK Tactics</div>
+        </div>
+        <div class="mitre-grid" id="mitre-grid">
+          <div class="empty" style="padding:10px 0">No tactics yet</div>
+        </div>
+      </div>
+
+      <!-- raw event log -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title">Raw Event Log</div>
+          <div class="panel-badge" id="event-count-badge">0 events</div>
+        </div>
+        <div class="event-log" id="event-log">
+          <div class="log-line">// waiting for events…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <span>SIEM-Lite · Python + Flask + SQLite · MIT License</span>
+    <span>Refreshes every 5s · MITRE ATT&amp;CK framework</span>
+  </footer>
+
+</div>
+
+<script>
+// ── clock ─────────────────────────────────────────────────────────────────────
+function tickClock() {
+  document.getElementById('clock').textContent =
+    new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ── severity config ───────────────────────────────────────────────────────────
+const SEV_ORDER  = ['critical','high','medium','low','info'];
+const SEV_COLORS = {
+  critical: '#ff0055', high: '#ff3860', medium: '#ffb000',
+  low: '#00ff88', info: '#00d4ff'
+};
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+function ago(ts) {
+  const d = (Date.now() - new Date(ts).getTime()) / 1000;
+  if (d <  60) return `${Math.floor(d)}s ago`;
+  if (d < 3600) return `${Math.floor(d/60)}m ago`;
+  return `${Math.floor(d/3600)}h ago`;
+}
+
+function sevClass(s) {
+  return `sev-${s}`;
+}
+
+// ── render alerts ─────────────────────────────────────────────────────────────
+let knownAlerts = new Set();
+
+function renderAlerts(alerts) {
+  const feed = document.getElementById('alert-feed');
+  const badge = document.getElementById('alert-count-badge');
+  badge.textContent = `${alerts.length} alert${alerts.length !== 1 ? 's' : ''}`;
+
+  if (!alerts.length) {
+    feed.innerHTML = '<div class="empty">No alerts yet — start simulate.py to generate events</div>';
+    return;
+  }
+
+  // only prepend new items
+  const newAlerts = alerts.filter(a => !knownAlerts.has(a.id));
+  newAlerts.forEach(a => knownAlerts.add(a.id));
+
+  if (!newAlerts.length) return;
+
+  // rebuild completely (simple approach for demo)
+  feed.innerHTML = alerts.map(a => `
+    <div class="alert-item">
+      <div class="sev-pill ${sevClass(a.severity)}">${a.severity}</div>
+      <div class="alert-body">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-desc">${a.description}</div>
+        <div class="alert-mitre">${a.mitre_technique || ''}</div>
+      </div>
+      <div class="alert-meta">
+        <div class="alert-rule">${a.rule_id}</div>
+        <div class="alert-time">${ago(a.timestamp)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── render severity bars ──────────────────────────────────────────────────────
+function renderSevChart(bySev) {
+  const el  = document.getElementById('sev-chart');
+  const max = Math.max(1, ...Object.values(bySev));
+  el.innerHTML = SEV_ORDER.map(s => {
+    const c = bySev[s] || 0;
+    const w = Math.round((c / max) * 100);
+    return `
+      <div class="sev-bar-row">
+        <div class="sev-bar-label">${s}</div>
+        <div class="sev-bar-track">
+          <div class="sev-bar-fill" style="width:${w}%; background:${SEV_COLORS[s]}"></div>
+        </div>
+        <div class="sev-bar-count">${c}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── render MITRE tactics ──────────────────────────────────────────────────────
+function renderMitre(alerts) {
+  const el = document.getElementById('mitre-grid');
+  const counts = {};
+  alerts.forEach(a => {
+    if (a.mitre_tactic) counts[a.mitre_tactic] = (counts[a.mitre_tactic]||0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,6);
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty" style="padding:10px 0">No tactics yet</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(([t, n]) => `
+    <div class="mitre-row">
+      <div class="mitre-tactic">${t}</div>
+      <div class="mitre-count">${n}</div>
+    </div>`).join('');
+}
+
+// ── render event log ──────────────────────────────────────────────────────────
+function renderEventLog(events) {
+  const el    = document.getElementById('event-log');
+  const badge = document.getElementById('event-count-badge');
+  badge.textContent = `${events.length} events`;
+  if (!events.length) return;
+  el.innerHTML = events.slice(0, 60).map(e =>
+    `<div class="log-line"><span>[${e.event_type}]</span> ${e.source} — ${e.timestamp.slice(11,19)}</div>`
+  ).join('');
+}
+
+// ── fetch & update ────────────────────────────────────────────────────────────
+const API = '/api';   // same origin
+
+async function refresh() {
+  try {
+    const [statsR, alertsR, eventsR, sevR] = await Promise.all([
+      fetch(`${API}/stats`),
+      fetch(`${API}/alerts?limit=50`),
+      fetch(`${API}/events?limit=60`),
+      fetch(`${API}/alerts/by-severity`),
+    ]);
+
+    const stats  = await statsR.json();
+    const alerts = await alertsR.json();
+    const events = await eventsR.json();
+    const bySev  = await sevR.json();
+
+    document.getElementById('stat-events').textContent   = (stats.total_events  || 0).toLocaleString();
+    document.getElementById('stat-alerts').textContent   = (stats.total_alerts  || 0).toLocaleString();
+    document.getElementById('stat-critical').textContent = (stats.critical_alerts || 0).toLocaleString();
+
+    renderAlerts(alerts);
+    renderSevChart(bySev);
+    renderMitre(alerts);
+    renderEventLog(events);
+
+  } catch (e) {
+    // API not running — show demo data
+    renderDemoData();
+  }
+}
+
+// ── demo mode (when API is offline) ──────────────────────────────────────────
+function renderDemoData() {
+  const demo = [
+    { id:1, rule_id:'DET-001', title:'SSH Brute Force Detected',
+      description:'8 failed SSH attempts from 185.220.101.42 in the last 60s.',
+      severity:'high', mitre_tactic:'Credential Access',
+      mitre_technique:'T1110.001 — Password Guessing',
+      timestamp: new Date(Date.now()-45000).toISOString() },
+    { id:2, rule_id:'DET-002', title:'Successful Login After Multiple Failures',
+      description:'Login succeeded from 45.33.32.156 after 4 failures.',
+      severity:'critical', mitre_tactic:'Initial Access',
+      mitre_technique:'T1078 — Valid Accounts',
+      timestamp: new Date(Date.now()-120000).toISOString() },
+    { id:3, rule_id:'DET-004', title:'Web Directory Scan Detected',
+      description:'20 HTTP 404s from 103.21.244.0 in 30s.',
+      severity:'medium', mitre_tactic:'Reconnaissance',
+      mitre_technique:'T1595.003 — Wordlist Scanning',
+      timestamp: new Date(Date.now()-300000).toISOString() },
+    { id:4, rule_id:'DET-005', title:'Privilege Escalation Attempt',
+      description:'User attempted sudo but is not in the sudoers file.',
+      severity:'high', mitre_tactic:'Privilege Escalation',
+      mitre_technique:'T1548.003 — Sudo Caching',
+      timestamp: new Date(Date.now()-600000).toISOString() },
+    { id:5, rule_id:'DET-003', title:'Web Attack Attempt',
+      description:'Suspicious HTTP request from 198.51.100.7 targeting /../../../etc/passwd',
+      severity:'high', mitre_tactic:'Discovery / Initial Access',
+      mitre_technique:'T1083 — File & Directory Discovery',
+      timestamp: new Date(Date.now()-900000).toISOString() },
+  ];
+  document.getElementById('stat-events').textContent   = '1,247';
+  document.getElementById('stat-alerts').textContent   = '23';
+  document.getElementById('stat-critical').textContent = '8';
+  renderAlerts(demo);
+  renderSevChart({ critical:3, high:8, medium:7, low:3, info:2 });
+  renderMitre(demo);
+}
+
+// ── boot ──────────────────────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

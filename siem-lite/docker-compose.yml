@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+
+  siem-lite:
+    build: .
+    container_name: siem-lite
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs:/app/logs
+      - siem-data:/app/data
+    environment:
+      - DB_PATH=/app/data/siem.db
+      # Optional alerting — uncomment & fill in:
+      # - SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+      # - SMTP_HOST=smtp.gmail.com
+      # - SMTP_PORT=587
+      # - SMTP_USER=you@gmail.com
+      # - SMTP_PASS=yourapppassword
+      # - SMTP_FROM=siem@yourdomain.com
+      # - ALERT_EMAIL=oncall@yourdomain.com
+    restart: unless-stopped
+
+volumes:
+  siem-data:
