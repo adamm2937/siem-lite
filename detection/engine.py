@@ -248,7 +248,81 @@ class FirewallSweepRule:
         return None
 
 
-# ─── Detection engine ─────────────────────────────────────────────────────────
+class SudoCommandRule:
+    """
+    MITRE T1548 — tracks authorised sudo commands (LOW severity).
+    Useful audit trail — not an attack, but worth logging.
+    """
+    def evaluate(self, event: dict) -> ThreatAlert | None:
+        if event.get("event_type") != "sudo_command":
+            return None
+        return ThreatAlert(
+            rule_id="DET-007",
+            title="Privileged Command Executed",
+            description=f"Sudo command run: {event.get('command', '?')}",
+            severity="low",
+            mitre_tactic="Privilege Escalation",
+            mitre_technique="T1548.003 — Sudo and Sudo Caching",
+            event=event,
+            context={"command": event.get("command")},
+        )
+
+
+class HTTPForbiddenRule:
+    """
+    MITRE T1595 — repeated 403s may indicate probing (LOW severity).
+    """
+    THRESHOLD = 3
+    WINDOW    = 60
+
+    def __init__(self):
+        self._win = SlidingWindow(max_age=self.WINDOW)
+
+    def evaluate(self, event: dict) -> ThreatAlert | None:
+        if event.get("event_type") != "http_forbidden":
+            return None
+        ip = event.get("src_ip", "unknown")
+        self._win.add(ip, event)
+        count = self._win.count(ip)
+        if count == self.THRESHOLD:
+            return ThreatAlert(
+                rule_id="DET-008",
+                title="Repeated Access Denied",
+                description=f"{count} HTTP 403 responses to {ip} in {self.WINDOW}s.",
+                severity="low",
+                mitre_tactic="Reconnaissance",
+                mitre_technique="T1595 — Active Scanning",
+                event=event,
+                context={"src_ip": ip, "count": count},
+            )
+        return None
+
+
+class NormalLoginRule:
+    """
+    Informational — logs successful SSH logins from known internal IPs.
+    """
+    INTERNAL = {"10.", "192.168.", "172."}
+
+    def evaluate(self, event: dict) -> ThreatAlert | None:
+        if event.get("event_type") != "ssh_login_success":
+            return None
+        ip = event.get("src_ip", "")
+        if any(ip.startswith(p) for p in self.INTERNAL):
+            return ThreatAlert(
+                rule_id="DET-009",
+                title="Internal SSH Login",
+                description=f"Successful SSH login by {event.get('user')} from internal IP {ip}.",
+                severity="info",
+                mitre_tactic="Lateral Movement",
+                mitre_technique="T1021.004 — SSH",
+                event=event,
+                context={"src_ip": ip, "user": event.get("user")},
+            )
+        return None
+
+
+
 
 ALL_RULES = [
     BruteForceSSHRule(),
@@ -257,6 +331,9 @@ ALL_RULES = [
     WebScannerRule(),
     PrivilegeEscalationRule(),
     FirewallSweepRule(),
+    SudoCommandRule(),
+    HTTPForbiddenRule(),
+    NormalLoginRule(),
 ]
 
 

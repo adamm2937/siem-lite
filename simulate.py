@@ -97,6 +97,7 @@ def firewall_sweep(ip=None):
 
 
 def normal_traffic():
+    """INFO — regular legitimate HTTP requests."""
     ip   = random.choice(LEGIT_IPS)
     path = random.choice(PATHS_SAFE)
     write(nginx_log,
@@ -104,16 +105,67 @@ def normal_traffic():
           f'"GET {path} HTTP/1.1" 200 1024 "-" "Mozilla/5.0"')
 
 
-# ── main loop ─────────────────────────────────────────────────────────────────
+def ssh_success_normal():
+    """INFO — legitimate SSH login from internal IP."""
+    ip   = random.choice(LEGIT_IPS)
+    user = random.choice(["adam", "deploy", "ubuntu"])
+    write(auth_log,
+          f"{ts()} server sshd[1234]: Accepted publickey for {user} from {ip} port 22 ssh2")
+    print(f"[SIM] Normal SSH login from {ip} (user={user})")
 
+
+def sudo_normal():
+    """LOW — authorised sudo command from a known user."""
+    user = random.choice(["adam", "ubuntu", "deploy"])
+    cmd  = random.choice(["/usr/bin/apt update", "/bin/systemctl restart nginx",
+                          "/usr/bin/tail -f /var/log/syslog"])
+    write(auth_log,
+          f"{ts()} server sudo: {user} : TTY=pts/0 ; PWD=/home/{user} ; "
+          f"USER=root ; COMMAND={cmd}")
+    print(f"[SIM] Authorised sudo by {user}: {cmd}")
+
+
+def http_forbidden():
+    """LOW — 403 on a restricted path (misconfigured client, not an attack)."""
+    ip   = random.choice(LEGIT_IPS)
+    path = random.choice(["/admin", "/server-status", "/.env"])
+    write(nginx_log,
+          f'{ip} - - [{datetime.now().strftime("%d/%b/%Y:%H:%M:%S +0000")}] '
+          f'"GET {path} HTTP/1.1" 403 512 "-" "Mozilla/5.0"')
+    print(f"[SIM] HTTP 403 from {ip} → {path}")
+
+
+def http_server_error():
+    """MEDIUM — 500 server error (app bug, not an attack)."""
+    ip   = random.choice(LEGIT_IPS + ATTACKER_IPS[:1])
+    path = random.choice(["/api/users", "/api/data", "/checkout"])
+    write(nginx_log,
+          f'{ip} - - [{datetime.now().strftime("%d/%b/%Y:%H:%M:%S +0000")}] '
+          f'"POST {path} HTTP/1.1" 500 256 "-" "python-requests/2.28"')
+    print(f"[SIM] HTTP 500 from {ip} → {path}")
+
+
+# ── main loop ─────────────────────────────────────────────────────────────────
+#
+# Severity distribution target:
+#   critical ~5%  |  high ~25%  |  medium ~25%  |  low ~20%  |  info ~25%
+#
 SCENARIOS = [
-    (ssh_brute_force,         0.15),
-    (ssh_success_after_fail,  0.10),
-    (web_scan,                0.10),
-    (web_attack,              0.20),
-    (privilege_escalation,    0.08),
-    (firewall_sweep,          0.10),
-    (normal_traffic,          0.27),
+    # --- CRITICAL / HIGH ---
+    (ssh_success_after_fail,  0.05),   # critical
+    (ssh_brute_force,         0.12),   # high
+    (web_attack,              0.08),   # high
+    (privilege_escalation,    0.05),   # high
+    # --- MEDIUM ---
+    (web_scan,                0.12),   # medium
+    (firewall_sweep,          0.08),   # medium
+    (http_server_error,       0.05),   # medium
+    # --- LOW ---
+    (http_forbidden,          0.10),   # low
+    (sudo_normal,             0.10),   # low
+    # --- INFO ---
+    (normal_traffic,          0.15),   # info
+    (ssh_success_normal,      0.10),   # info
 ]
 
 if __name__ == "__main__":
