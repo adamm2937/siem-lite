@@ -1,6 +1,5 @@
 # 🛡 SIEM-Lite. Automated Threat Detection Platform
 
-<img width="1856" height="970" alt="Screenshot from 2026-04-25 22-38-31" src="https://github.com/user-attachments/assets/ef109660-a533-49ee-bb33-1b68bea82de4" />
 
 > A lightweight, production-style SIEM (Security Information & Event Management) system built in Python.  
 > Ingests logs from multiple sources, correlates events using sliding-window rules, fires real-time alerts, and visualises threats on a live dashboard.
@@ -18,6 +17,11 @@
 Real SOC work is not about running a single scanner, it is about **continuous monitoring**: ingesting logs from everywhere, correlating events across sources, and surfacing the signal from the noise.
 
 This project implements that full pipeline from scratch, without relying on a hosted SIEM product. Every component is built to mirror how production blue-team infrastructure actually works.
+
+---
+
+##How UI looks like 
+<img width="1856" height="970" alt="Screenshot from 2026-04-25 22-38-31" src="https://github.com/user-attachments/assets/ef109660-a533-49ee-bb33-1b68bea82de4" />
 
 ---
 
