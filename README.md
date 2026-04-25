@@ -20,7 +20,7 @@ This project implements that full pipeline from scratch, without relying on a ho
 
 ---
 
-##How UI looks like 
+## How UI looks like 
 <img width="1856" height="970" alt="Screenshot from 2026-04-25 22-38-31" src="https://github.com/user-attachments/assets/ef109660-a533-49ee-bb33-1b68bea82de4" />
 
 ---
