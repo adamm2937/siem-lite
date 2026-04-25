@@ -4,12 +4,6 @@
 > A lightweight, production-style SIEM (Security Information & Event Management) system built in Python.  
 > Ingests logs from multiple sources, correlates events using sliding-window rules, fires real-time alerts, and visualises threats on a live dashboard.
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?style=flat-square&logo=python)
-![Flask](https://img.shields.io/badge/Flask-3.0-black?style=flat-square&logo=flask)
-![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat-square&logo=docker)
-![MITRE ATT&CK](https://img.shields.io/badge/MITRE_ATT%26CK-mapped-red?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
-
 ---
 
 ## Why This Project?
@@ -87,7 +81,7 @@ Each parser normalises raw lines into a standard event schema:
 
 ### Correlation-Based Detection Rules
 
-All rules are stateful — they track event history across a sliding time window to detect patterns, not just individual events.
+All rules are stateful - they track event history across a sliding time window to detect patterns, not just individual events.
 
 | Rule ID | Name | Technique | Severity |
 |---------|------|-----------|----------|
@@ -102,7 +96,7 @@ All alerts are tagged with **MITRE ATT&CK** tactic and technique.
 
 ### Multi-channel Alerting
 
-Configure via environment variables — no code changes required:
+Configure via environment variables - no code changes required:
 
 ```bash
 # Slack
@@ -133,7 +127,6 @@ A dark-themed web dashboard at `http://localhost:5000` that updates every 5 seco
 ### Option 1 - Docker (recommended, one command)
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/siem-lite
 cd siem-lite
 docker-compose up --build
 ```
@@ -148,7 +141,6 @@ python simulate.py
 ### Option 2 - Local Python
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/siem-lite
 cd siem-lite
 pip install -r requirements.txt
 python main.py
@@ -166,7 +158,7 @@ python simulate.py
 
 Simulated scenarios:
 - SSH brute-force campaigns (multiple IPs)
-- Credential stuffing — failures followed by success
+- Credential stuffing - failures followed by success
 - Web directory enumeration (sqlmap, gobuster-style)
 - Web injection / path traversal attempts
 - Sudo privilege escalation
@@ -250,11 +242,11 @@ This project intentionally complements the other tools in this repository:
 
 ## Tech Stack
 
-- **Python 3.12** — core pipeline, parsers, detection engine
-- **Flask** — lightweight REST API and dashboard server
-- **SQLite** — zero-dependency persistent storage
-- **Docker / Docker Compose** — one-command deployment
-- **Vanilla JS** — dashboard with no build step required
+- **Python 3.12** - core pipeline, parsers, detection engine
+- **Flask** - lightweight REST API and dashboard server
+- **SQLite** - zero-dependency persistent storage
+- **Docker / Docker Compose** - one-command deployment
+- **Vanilla JS** - dashboard with no build step required
 
 ---
 
