@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.db
+logs/auth.log
+logs/nginx_access.log
+logs/syslog
+logs/app.json
+*.egg-info/
+.env
