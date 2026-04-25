@@ -1,4 +1,4 @@
-# 🛡 SIEM-Lite — Automated Threat Detection Platform
+# 🛡 SIEM-Lite. Automated Threat Detection Platform
 
 > A lightweight, production-style SIEM (Security Information & Event Management) system built in Python.  
 > Ingests logs from multiple sources, correlates events using sliding-window rules, fires real-time alerts, and visualises threats on a live dashboard.
@@ -13,7 +13,7 @@
 
 ## Why This Project?
 
-Real SOC work is not about running a single scanner — it is about **continuous monitoring**: ingesting logs from everywhere, correlating events across sources, and surfacing the signal from the noise.
+Real SOC work is not about running a single scanner, it is about **continuous monitoring**: ingesting logs from everywhere, correlating events across sources, and surfacing the signal from the noise.
 
 This project implements that full pipeline from scratch, without relying on a hosted SIEM product. Every component is built to mirror how production blue-team infrastructure actually works.
 
@@ -61,10 +61,10 @@ This project implements that full pipeline from scratch, without relying on a ho
 ## Features
 
 ### Multi-source Log Ingestion
-- **`auth.log`** — SSH login attempts, sudo commands
-- **`nginx_access.log`** — HTTP requests in combined log format
-- **`syslog / kern.log`** — OOM kills, segfaults, firewall (UFW) drops
-- **Custom JSON logs** — structured output from any app (including the brute-force detector in this repo)
+- **`auth.log`** - SSH login attempts, sudo commands
+- **`nginx_access.log`** - HTTP requests in combined log format
+- **`syslog / kern.log`** - OOM kills, segfaults, firewall (UFW) drops
+- **Custom JSON logs** - structured output from any app (including the brute-force detector in this repo)
 
 Each parser normalises raw lines into a standard event schema:
 ```json
@@ -124,7 +124,7 @@ A dark-themed web dashboard at `http://localhost:5000` that updates every 5 seco
 
 ## Quick Start
 
-### Option 1 — Docker (recommended, one command)
+### Option 1 - Docker (recommended, one command)
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/siem-lite
@@ -139,7 +139,7 @@ In a second terminal, generate attack traffic:
 python simulate.py
 ```
 
-### Option 2 — Local Python
+### Option 2 - Local Python
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/siem-lite
@@ -252,6 +252,3 @@ This project intentionally complements the other tools in this repository:
 
 ---
 
-## License
-
-MIT — use freely, attribution appreciated.
